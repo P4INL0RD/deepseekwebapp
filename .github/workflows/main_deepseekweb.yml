@@ -1,7 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
-
 name: Build and deploy Python app to Azure Web App - deepseekweb
 
 on:
@@ -14,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -28,22 +24,18 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-      
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+        run: pip install -r app/requirements.txt  # 📌 Ajuste de ruta
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        run: zip release.zip -r app/ startup.sh  # 📌 Incluye la carpeta app y startup.sh
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            release.zip
-            !venv/
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,8 +44,8 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
@@ -64,13 +56,12 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F00D9A1BC28A4314929C1A84F65EDBA4 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B030DEED100649E585D017558F44B9C2 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D50D93DA8B5F4B56BB12ADC694782EEA }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
@@ -78,4 +69,11 @@ jobs:
         with:
           app-name: 'deepseekweb'
           slot-name: 'Production'
-          
+
+      - name: Extract deployment files
+        run: |
+          cd /home/site/wwwroot/
+          if [ -f output.tar.gz ]; then tar -xvzf output.tar.gz; fi
+          if [ -f release.zip ]; then unzip -o release.zip; fi
+          chmod +x startup.sh
+          ./startup.sh
