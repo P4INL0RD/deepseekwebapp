@@ -48,6 +48,5 @@ def streamlit_ui():
         st.success("Resumen generado:")
         st.text(summary)
 
-if __name__ == '__main__':
-    threading.Thread(target=start_flask).start()
-    streamlit_ui()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
