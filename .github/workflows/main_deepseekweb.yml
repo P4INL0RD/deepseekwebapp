@@ -26,10 +26,15 @@ jobs:
           source venv/bin/activate
 
       - name: Install dependencies
-        run: pip install -r ./app/requirements.txt  # 📌 Ajuste de ruta
+        run: |
+          cd app  # 📌 Entrar en la carpeta antes de instalar
+          pip install -r requirements.txt
 
       - name: Zip artifact for deployment
-        run: zip release.zip -r ./app/startup.sh  # 📌 Incluye la carpeta app y startup.sh
+        run: |
+          cd app  # 📌 Asegurar que se empaqueta desde la carpeta correcta
+          zip -r ../release.zip .  # Subir solo el contenido de `app/`
+          cd ..
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
@@ -54,7 +59,7 @@ jobs:
           name: python-app
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        run: unzip release.zip -d app  # 📌 Extraer todo en `app/`
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -63,7 +68,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
