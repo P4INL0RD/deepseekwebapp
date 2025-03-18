@@ -10,37 +10,41 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read  # Requerido para actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
+      - name: Debug - List repository files
+        run: ls -R  # Muestra la estructura de archivos y carpetas para depuración
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Create and start virtual environment
+      - name: Create and activate virtual environment
         run: |
+          cd App  # Cambiar a la carpeta correcta
           python -m venv venv
           source venv/bin/activate
 
       - name: Install dependencies
         run: |
-          cd app  # 📌 Entrar en la carpeta antes de instalar
+          cd App
           pip install -r requirements.txt
 
       - name: Zip artifact for deployment
         run: |
-          cd app  # 📌 Asegurar que se empaqueta desde la carpeta correcta
-          zip -r ../release.zip .  # Subir solo el contenido de `app/`
-          cd ..
+          cd App
+          zip -r release.zip . -x "venv/*"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: release.zip
+          path: App/release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -49,7 +53,7 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write
+      id-token: write  # Requerido para autenticación con Azure
       contents: read
 
     steps:
@@ -59,7 +63,7 @@ jobs:
           name: python-app
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip -d app  # 📌 Extraer todo en `app/`
+        run: unzip release.zip
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -74,11 +78,3 @@ jobs:
         with:
           app-name: 'deepseekweb'
           slot-name: 'Production'
-
-      - name: Extract deployment files
-        run: |
-          cd /home/site/wwwroot/
-          if [ -f output.tar.gz ]; then tar -xvzf output.tar.gz; fi
-          if [ -f release.zip ]; then unzip -o release.zip; fi
-          chmod +x startup.sh
-          ./startup.sh
